@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload PDF</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #response {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Upload PDF to Extract QR Code</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept="application/pdf" required>
+        <button type="button" onclick="uploadPDF(event)">Upload</button>
+    </form>
+    <div id="response"></div>
+
+    <script>
+        function uploadPDF(event) {
+            event.preventDefault(); // Prevent the form from submitting and reloading the page
+
+            let formData = new FormData();
+            let fileInput = document.getElementById("file");
+            
+            if (!fileInput.files.length) {
+                alert("Please select a PDF file.");
+                return;
+            }
+            
+            formData.append("file", fileInput.files[0]);
+
+            fetch("http://192.168.0.105:5000/extract-qr", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                console.log("Raw Response:", response); // Log the raw response
+                return response.json();
+            })
+            .then(data => {
+                console.log("API Response:", data); // Log the parsed JSON data
+                displayResponse(data);
+            })
+            .catch(error => {
+                console.error("Fetch Error:", error); // Log any errors
+                document.getElementById("response").innerText = "Error: " + error;
+            });
+        }
+
+        function displayResponse(data) {
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = ""; // Clear previous content
+        
+            if (data.error) {
+                responseDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                return;
+            }
+        
+            if (data) {
+                // Create a table to display the JSON data
+                let table = "<table>";
+                table += "<tr><th>Key</th><th>Value</th></tr>";
+        
+                // Recursive function to handle nested objects
+                function createTableRows(obj, prefix = "") {
+                    for (const [key, value] of Object.entries(obj)) {
+                        const fullKey = prefix ? `${prefix}.${key}` : key;
+                        if (typeof value === "object" && value !== null) {
+                            // If the value is an object, recursively create rows
+                            createTableRows(value, fullKey);
+                        } else {
+                            // If the value is not an object, add a row to the table
+                            table += `<tr><td>${fullKey}</td><td>${value}</td></tr>`;
+                        }
+                    }
+                }
+        
+                // Start creating rows
+                createTableRows(data);
+        
+                table += "</table>";
+                responseDiv.innerHTML = table;
+            } else {
+                responseDiv.innerHTML = "<p>No QR code data found.</p>";
+            }
+        }
+    </script>
+</body>
+</html>
