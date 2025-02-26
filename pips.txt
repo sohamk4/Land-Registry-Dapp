@@ -1,2 +1,0 @@
-pip install flask pyzbar opencv-python pymupdf numpy
-pip install flask-cors
